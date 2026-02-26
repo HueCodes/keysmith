@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run unit tests
+        run: go test ./... -v -count=1 -race -timeout 120s
+
+      - name: Vet
+        run: go vet ./...
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build binary
+        run: go build -o bin/manager ./cmd/main.go
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: keysmith:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  manifests:
+    name: Verify Generated Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install controller-gen
+        run: go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
+
+      - name: Generate manifests
+        run: make manifests generate
+
+      - name: Check for uncommitted changes
+        run: |
+          if ! git diff --exit-code; then
+            echo "Generated files are out of date. Run 'make manifests generate' and commit the results."
+            exit 1
+          fi
