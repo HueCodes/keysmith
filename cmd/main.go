@@ -43,6 +43,7 @@ import (
 	"github.com/hstores/keysmith/internal/provider/mock"
 	"github.com/hstores/keysmith/internal/provider/static"
 	"github.com/hstores/keysmith/internal/provider/vault"
+	kswebhook "github.com/hstores/keysmith/internal/webhook"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -196,6 +197,10 @@ func main() {
 		Registry: registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "SecretRotationPolicy")
+		os.Exit(1)
+	}
+	if err := (&kswebhook.SecretRotationPolicyWebhook{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create webhook", "webhook", "SecretRotationPolicy")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
