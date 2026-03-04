@@ -2,4 +2,6 @@
 resources:
 - secrets_v1alpha1_secretrotationpolicy.yaml
 - secrets_v1alpha1_rotationrecord.yaml
+# Full annotated example (for reference — requires AWS; comment out for local demos)
+# - secrets_v1alpha1_full_example.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
