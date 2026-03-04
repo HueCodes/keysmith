@@ -185,7 +185,7 @@ func (r *SecretRotationPolicyReconciler) executeRotation(
 	ksmetrics.RotationDuration.WithLabelValues(policy.Name, policy.Namespace, prov.Name()).Observe(duration.Seconds())
 
 	if provErr != nil {
-		logger.Error(provErr, "provider rotation failed")
+		logger.Error(provErr, "Provider rotation failed", "provider", prov.Name())
 		r.finalizeRecord(ctx, record, secretsv1alpha1.RecordPhaseFailed, duration, prov.Name(), nil, nil, provErr.Error())
 
 		if policy.Spec.Policy.FailurePolicy == secretsv1alpha1.FailurePolicyIgnore {
@@ -201,6 +201,15 @@ func (r *SecretRotationPolicyReconciler) executeRotation(
 			LastTransitionTime: metav1.Now(),
 		})
 		_ = r.Status().Update(ctx, policy)
+
+		r.dispatchNotifications(ctx, policy, secretsv1alpha1.EventRotationFailed, NotificationPayload{
+			Event:     secretsv1alpha1.EventRotationFailed,
+			Policy:    policy.Name,
+			Namespace: policy.Namespace,
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			Record:    record.Name,
+			Error:     provErr.Error(),
+		})
 
 		retryBackoff := defaultRetryBackoff
 		if policy.Spec.Policy.RetryBackoff != nil {
@@ -303,7 +312,15 @@ func (r *SecretRotationPolicyReconciler) executeRotation(
 
 	r.pruneHistory(ctx, policy)
 
-	logger.Info("rotation completed successfully",
+	r.dispatchNotifications(ctx, policy, secretsv1alpha1.EventRotationSucceeded, NotificationPayload{
+		Event:     secretsv1alpha1.EventRotationSucceeded,
+		Policy:    policy.Name,
+		Namespace: policy.Namespace,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Record:    record.Name,
+	})
+
+	logger.Info("Rotation completed successfully",
 		"provider", prov.Name(),
 		"duration", duration.Round(time.Millisecond),
 		"nextRotation", next.Format(time.RFC3339),
@@ -397,7 +414,7 @@ func (r *SecretRotationPolicyReconciler) pruneHistory(ctx context.Context, polic
 	})
 
 	toDelete := len(list.Items) - int(limit)
-	for i := 0; i < toDelete; i++ {
+	for i := range toDelete {
 		_ = r.Delete(ctx, &list.Items[i])
 	}
 }
