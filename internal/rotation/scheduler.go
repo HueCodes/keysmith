@@ -56,9 +56,5 @@ func RequeueDelay(schedule string, lastRotation *time.Time, rotationWindow time.
 	}
 
 	effectiveNext := next.Add(-rotationWindow)
-	delay := time.Until(effectiveNext)
-	if delay < minDelay {
-		delay = minDelay
-	}
-	return delay, nil
+	return max(time.Until(effectiveNext), minDelay), nil
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	secretsv1alpha1 "github.com/hstores/keysmith/api/v1alpha1"
 )
@@ -66,15 +67,7 @@ func (r *Registry) Names() []string {
 }
 
 func (r *Registry) nameList() string {
-	names := r.Names()
-	result := ""
-	for i, n := range names {
-		if i > 0 {
-			result += ", "
-		}
-		result += n
-	}
-	return result
+	return strings.Join(r.Names(), ", ")
 }
 
 // MapKeys applies KeyMappings to a provider Secret, returning only the requested keys

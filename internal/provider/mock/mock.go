@@ -10,6 +10,8 @@ import (
 	"github.com/hstores/keysmith/internal/provider"
 )
 
+const providerName = "mock"
+
 // Mock returns deterministic fake secret values. Each call to RotateSecret
 // increments an internal counter so callers can observe the rotation happened.
 type Mock struct {
@@ -21,7 +23,7 @@ func New() *Mock {
 	return &Mock{}
 }
 
-func (m *Mock) Name() string { return "mock" }
+func (m *Mock) Name() string { return providerName }
 
 func (m *Mock) Validate(_ map[string]string) error { return nil }
 
@@ -29,13 +31,13 @@ func (m *Mock) Validate(_ map[string]string) error { return nil }
 func (m *Mock) FetchSecret(_ context.Context, params map[string]string) (provider.Secret, error) {
 	prefix := params["prefix"]
 	if prefix == "" {
-		prefix = "mock"
+		prefix = providerName
 	}
 	n := m.rotateCount.Load()
 	return provider.Secret{
-		"password": []byte(fmt.Sprintf("%s-password-v%d", prefix, n)),
-		"username": []byte(fmt.Sprintf("%s-user", prefix)),
-		"apiKey":   []byte(fmt.Sprintf("%s-apikey-v%d", prefix, n)),
+		"password": fmt.Appendf(nil, "%s-password-v%d", prefix, n),
+		"username": fmt.Appendf(nil, "%s-user", prefix),
+		"apiKey":   fmt.Appendf(nil, "%s-apikey-v%d", prefix, n),
 	}, nil
 }
 
@@ -44,11 +46,11 @@ func (m *Mock) RotateSecret(_ context.Context, params map[string]string) (provid
 	n := m.rotateCount.Add(1)
 	prefix := params["prefix"]
 	if prefix == "" {
-		prefix = "mock"
+		prefix = providerName
 	}
 	return provider.Secret{
-		"password": []byte(fmt.Sprintf("%s-password-v%d", prefix, n)),
-		"username": []byte(fmt.Sprintf("%s-user", prefix)),
-		"apiKey":   []byte(fmt.Sprintf("%s-apikey-v%d", prefix, n)),
+		"password": fmt.Appendf(nil, "%s-password-v%d", prefix, n),
+		"username": fmt.Appendf(nil, "%s-user", prefix),
+		"apiKey":   fmt.Appendf(nil, "%s-apikey-v%d", prefix, n),
 	}, nil
 }
